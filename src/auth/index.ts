@@ -20,16 +20,53 @@ export function createAuth(env: CloudflareBindings, baseURL?: string) {
         d1Native: env.pingflare_db,
       },
       {
-        emailAndPassword: {
-          enabled: true,
-          disableSignUp: true,
-          minPasswordLength: 8,
+        user: {
+          fields: {
+            emailVerified: "email_verified",
+            createdAt: "created_at",
+            updatedAt: "updated_at",
+          },
         },
         session: {
           cookieCache: {
             enabled: true,
             maxAge: 5 * 60,
           },
+          fields: {
+            expiresAt: "expires_at",
+            createdAt: "created_at",
+            updatedAt: "updated_at",
+            ipAddress: "ip_address",
+            userAgent: "user_agent",
+            userId: "user_id",
+          },
+        },
+        account: {
+          modelName: "account",
+          fields: {
+            accountId: "account_id",
+            providerId: "provider_id",
+            userId: "user_id",
+            accessToken: "access_token",
+            refreshToken: "refresh_token",
+            idToken: "id_token",
+            accessTokenExpiresAt: "access_token_expires_at",
+            refreshTokenExpiresAt: "refresh_token_expires_at",
+            createdAt: "created_at",
+            updatedAt: "updated_at",
+          },
+        },
+        verification: {
+          fields: {
+            expiresAt: "expires_at",
+            createdAt: "created_at",
+            updatedAt: "updated_at",
+          },
+        },
+        emailAndPassword: {
+          enabled: true,
+          disableSignUp: true,
+          minPasswordLength: 8,
         },
         advanced: {
           cookiePrefix: "pingflare",
