@@ -19,6 +19,8 @@ export function createAuth(env: CloudflareBindings, baseURL?: string, cf?: unkno
       {
         d1Native: env.pingflare_db,
         cf,
+        autoDetectIpAddress: false,
+        geolocationTracking: false,
       },
       {
         user: {
