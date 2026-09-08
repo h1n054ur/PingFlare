@@ -7,7 +7,7 @@ import { apiRoutes } from "./routes/api";
 import { publicApiRoutes } from "./routes/public-api";
 import { SchedulerDO } from "./scheduler";
 import { createAuth, type CloudflareBindings } from "./auth";
-import { createAdminUser, adminUserExists } from "./auth/bootstrap";
+import { createAdminUser, adminUserExists, resetAdminUser } from "./auth/bootstrap";
 import { subscribers } from "./db/schema";
 
 type Bindings = CloudflareBindings & {
@@ -62,6 +62,30 @@ app.post("/api/setup", async (c) => {
   }
 
   const user = await createAdminUser(c.env.pingflare_db, email, password);
+  return c.json({ success: true, user });
+});
+
+app.post("/api/reset-admin", async (c) => {
+  const body = await c.req
+    .json<{ email?: string; password?: string; setupKey?: string }>()
+    .catch(() => ({ email: undefined, password: undefined, setupKey: undefined }));
+
+  const providedKey = body.setupKey || c.req.header("x-setup-key") || c.req.query("key");
+
+  if (!providedKey || providedKey !== c.env.ADMIN_PASSWORD) {
+    return c.json({ error: "Invalid setup key" }, 403);
+  }
+
+  const email = body.email?.trim();
+  const password = body.password;
+  if (!password || password.length < 8) {
+    return c.json({ error: "password (min 8 chars) is required" }, 400);
+  }
+
+  const user = await adminUserExists(c.env.pingflare_db)
+    ? await resetAdminUser(c.env.pingflare_db, email ?? "admin@example.com", password)
+    : await createAdminUser(c.env.pingflare_db, email ?? "admin@example.com", password);
+
   return c.json({ success: true, user });
 });
 
