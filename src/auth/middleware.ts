@@ -12,7 +12,7 @@ type AuthEnv = {
 };
 
 export const sessionMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
-  const auth = createAuth(c.env, new URL(c.req.url).origin);
+  const auth = createAuth(c.env, new URL(c.req.url).origin, c.req.raw.cf);
   const session = await auth.api.getSession({
     headers: c.req.raw.headers,
   });
@@ -21,7 +21,7 @@ export const sessionMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
 });
 
 export const requireAdmin = createMiddleware<AuthEnv>(async (c, next) => {
-  const auth = createAuth(c.env, new URL(c.req.url).origin);
+  const auth = createAuth(c.env, new URL(c.req.url).origin, c.req.raw.cf);
   const session = await auth.api.getSession({
     headers: c.req.raw.headers,
   });

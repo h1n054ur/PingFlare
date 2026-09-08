@@ -11,13 +11,14 @@ export type CloudflareBindings = {
   [key: string]: unknown;
 };
 
-export function createAuth(env: CloudflareBindings, baseURL?: string) {
+export function createAuth(env: CloudflareBindings, baseURL?: string, cf?: unknown) {
   return betterAuth({
     baseURL: baseURL || env.BETTER_AUTH_URL || "http://localhost:8787",
     secret: env.BETTER_AUTH_SECRET,
     ...withCloudflare(
       {
         d1Native: env.pingflare_db,
+        cf,
       },
       {
         user: {

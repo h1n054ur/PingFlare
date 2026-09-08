@@ -31,7 +31,7 @@ app.use("/api/*", async (c, next) => {
 });
 
 app.all("/api/auth/*", (c) => {
-  const auth = createAuth(c.env, new URL(c.req.url).origin);
+  const auth = createAuth(c.env, new URL(c.req.url).origin, c.req.raw.cf);
   return auth.handler(c.req.raw);
 });
 
