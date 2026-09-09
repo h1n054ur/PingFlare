@@ -170,17 +170,25 @@ function MobileSidebar({
 }
 
 export default function AdminLayout() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const { data: session } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const user = session?.user;
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!loading && !isAuthenticated) {
       navigate("/admin/login");
     }
-  }, [isAuthenticated, navigate]);
+  }, [loading, isAuthenticated, navigate]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen justify-center bg-gray-50 py-16">
+        <div className="size-8 animate-spin rounded-full border-2 border-gray-300 border-t-indigo-600" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) return null;
 
