@@ -1,24 +1,12 @@
 import { useState, useEffect } from "react";
 import {
-  SimpleGrid,
-  Paper,
-  Text,
-  Group,
-  Stack,
-  Badge,
-  Loader,
-  Center,
-  ThemeIcon,
-  RingProgress,
-} from "@mantine/core";
-import {
-  IconActivity,
-  IconAlertTriangle,
-  IconCheck,
-  IconPackages,
-  IconClock,
-} from "@tabler/icons-react";
+  CheckIcon,
+  ExclamationTriangleIcon,
+  SignalIcon,
+  Squares2X2Icon,
+} from "@heroicons/react/24/outline";
 import { api } from "../../lib/api";
+import { Badge, Card, PageHeader, StatCard } from "../../components/ui";
 
 export default function AdminOverview() {
   const [data, setData] = useState<any>(null);
@@ -30,12 +18,12 @@ export default function AdminOverview() {
 
   if (loading)
     return (
-      <Center py="xl">
-        <Loader />
-      </Center>
+      <div className="flex justify-center py-16">
+        <div className="size-8 animate-spin rounded-full border-2 border-gray-300 border-t-indigo-600" />
+      </div>
     );
 
-  if (!data) return <Text c="red">Failed to load dashboard</Text>;
+  if (!data) return <p className="text-sm/6 text-red-600">Failed to load dashboard</p>;
 
   const monitors = data.monitors || [];
   const components = data.components || [];
@@ -49,190 +37,139 @@ export default function AdminOverview() {
   const statusColor = (s: string) => {
     if (s === "operational") return "green";
     if (s === "degraded_performance") return "yellow";
-    if (s === "partial_outage") return "orange";
+    if (s === "partial_outage") return "yellow";
     if (s === "major_outage") return "red";
     if (s === "under_maintenance") return "blue";
     return "gray";
   };
 
+  const ringCircumference = 2 * Math.PI * 34;
+  const upRatio = totalMonitors > 0 ? upMonitors / totalMonitors : 1;
+
   return (
-    <Stack gap="lg">
-      <Text fw={700} size="xl">
-        Overview
-      </Text>
+    <div className="space-y-8">
+      <PageHeader title="Overview" />
 
-      <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }}>
-        <Paper p="md" withBorder>
-          <Group>
-            <ThemeIcon color="blue" variant="light" size="lg">
-              <IconActivity size={20} />
-            </ThemeIcon>
-            <div>
-              <Text size="xs" c="dimmed">
-                Monitors
-              </Text>
-              <Text fw={700} size="xl">
-                {totalMonitors}
-              </Text>
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4">
+        <StatCard name="Monitors" value={totalMonitors} icon={<SignalIcon className="size-6" />} />
+        <StatCard
+          name="Up"
+          value={<span className="text-green-600">{upMonitors}</span>}
+          icon={<CheckIcon className="size-6" />}
+          tone="success"
+        />
+        <StatCard
+          name="Down"
+          value={<span className="text-red-600">{downMonitors}</span>}
+          icon={<ExclamationTriangleIcon className="size-6" />}
+          tone="danger"
+        />
+        <StatCard
+          name="Active Incidents"
+          value={incidents.length}
+          icon={<ExclamationTriangleIcon className="size-6" />}
+          tone="warning"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <Card className="p-6">
+          <h2 className="text-base font-semibold text-gray-900">Overall Status</h2>
+          <div className="mt-4 flex items-center gap-x-6">
+            <div className="relative size-20 shrink-0">
+              <svg viewBox="0 0 80 80" className="size-20 -rotate-90">
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="34"
+                  fill="none"
+                  strokeWidth="8"
+                  className="stroke-gray-200"
+                />
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="34"
+                  fill="none"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  className={downMonitors > 0 ? "stroke-red-500" : "stroke-green-500"}
+                  strokeDasharray={ringCircumference}
+                  strokeDashoffset={ringCircumference * (1 - upRatio)}
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-900">
+                {totalMonitors > 0 ? `${Math.round(upRatio * 100)}%` : "N/A"}
+              </div>
             </div>
-          </Group>
-        </Paper>
-
-        <Paper p="md" withBorder>
-          <Group>
-            <ThemeIcon color="green" variant="light" size="lg">
-              <IconCheck size={20} />
-            </ThemeIcon>
             <div>
-              <Text size="xs" c="dimmed">
-                Up
-              </Text>
-              <Text fw={700} size="xl" c="green">
-                {upMonitors}
-              </Text>
-            </div>
-          </Group>
-        </Paper>
-
-        <Paper p="md" withBorder>
-          <Group>
-            <ThemeIcon color="red" variant="light" size="lg">
-              <IconAlertTriangle size={20} />
-            </ThemeIcon>
-            <div>
-              <Text size="xs" c="dimmed">
-                Down
-              </Text>
-              <Text fw={700} size="xl" c="red">
-                {downMonitors}
-              </Text>
-            </div>
-          </Group>
-        </Paper>
-
-        <Paper p="md" withBorder>
-          <Group>
-            <ThemeIcon color="orange" variant="light" size="lg">
-              <IconAlertTriangle size={20} />
-            </ThemeIcon>
-            <div>
-              <Text size="xs" c="dimmed">
-                Active Incidents
-              </Text>
-              <Text fw={700} size="xl">
-                {incidents.length}
-              </Text>
-            </div>
-          </Group>
-        </Paper>
-      </SimpleGrid>
-
-      <SimpleGrid cols={{ base: 1, md: 2 }}>
-        <Paper p="md" withBorder>
-          <Text fw={600} mb="sm">
-            Overall Status
-          </Text>
-          <Group>
-            <RingProgress
-              size={80}
-              thickness={8}
-              sections={[
-                {
-                  value: totalMonitors > 0 ? (upMonitors / totalMonitors) * 100 : 100,
-                  color: downMonitors > 0 ? "red" : "green",
-                },
-              ]}
-              label={
-                <Text ta="center" size="xs" fw={700}>
-                  {totalMonitors > 0
-                    ? `${Math.round((upMonitors / totalMonitors) * 100)}%`
-                    : "N/A"}
-                </Text>
-              }
-            />
-            <div>
-              <Badge color={statusColor(data.overallStatus?.status || "operational")} size="lg">
+              <Badge tone={statusColor(data.overallStatus?.status || "operational")}>
                 {data.overallStatus?.description || "No Status"}
               </Badge>
-              <Text size="sm" c="dimmed" mt="xs">
+              <p className="mt-2 text-sm/6 text-gray-500">
                 {upMonitors} of {totalMonitors} monitors up
-              </Text>
+              </p>
             </div>
-          </Group>
-        </Paper>
+          </div>
+        </Card>
 
-        <Paper p="md" withBorder>
-          <Text fw={600} mb="sm">
-            Components
-          </Text>
-          <Stack gap="xs">
+        <Card className="p-6">
+          <div className="flex items-center gap-x-2">
+            <Squares2X2Icon aria-hidden="true" className="size-5 text-gray-400" />
+            <h2 className="text-base font-semibold text-gray-900">Components</h2>
+          </div>
+          <div className="mt-4 space-y-2">
             {components.length === 0 && (
-              <Text size="sm" c="dimmed">
-                No components configured
-              </Text>
+              <p className="text-sm/6 text-gray-500">No components configured</p>
             )}
             {components.slice(0, 8).map((c: any) => (
-              <Group key={c.id} justify="space-between">
-                <Text size="sm">{c.name}</Text>
-                <Badge color={statusColor(c.status)} variant="light" size="sm">
-                  {c.status?.replace(/_/g, " ")}
-                </Badge>
-              </Group>
+              <div key={c.id} className="flex items-center justify-between gap-x-4">
+                <span className="text-sm/6 text-gray-900">{c.name}</span>
+                <Badge tone={statusColor(c.status)}>{c.status?.replace(/_/g, " ")}</Badge>
+              </div>
             ))}
-          </Stack>
-        </Paper>
-      </SimpleGrid>
+          </div>
+        </Card>
+      </div>
 
       {incidents.length > 0 && (
-        <Paper p="md" withBorder>
-          <Text fw={600} mb="sm">
-            Active Incidents
-          </Text>
-          <Stack gap="xs">
+        <Card className="p-6">
+          <h2 className="text-base font-semibold text-gray-900">Active Incidents</h2>
+          <div className="mt-4 space-y-2">
             {incidents.map((inc: any) => (
-              <Group key={inc.id} justify="space-between">
+              <div key={inc.id} className="flex items-center justify-between gap-x-4">
                 <div>
-                  <Text size="sm" fw={500}>
-                    {inc.title}
-                  </Text>
-                  <Text size="xs" c="dimmed">
+                  <p className="text-sm/6 font-medium text-gray-900">{inc.title}</p>
+                  <p className="text-xs/5 text-gray-500">
                     {new Date(inc.created_at).toLocaleString()}
-                  </Text>
+                  </p>
                 </div>
-                <Badge color={inc.severity === "major" ? "red" : "yellow"} variant="light">
-                  {inc.status}
-                </Badge>
-              </Group>
+                <Badge tone={inc.severity === "major" ? "red" : "yellow"}>{inc.status}</Badge>
+              </div>
             ))}
-          </Stack>
-        </Paper>
+          </div>
+        </Card>
       )}
 
       {maintenances.length > 0 && (
-        <Paper p="md" withBorder>
-          <Text fw={600} mb="sm">
-            Upcoming Maintenance
-          </Text>
-          <Stack gap="xs">
+        <Card className="p-6">
+          <h2 className="text-base font-semibold text-gray-900">Upcoming Maintenance</h2>
+          <div className="mt-4 space-y-2">
             {maintenances.map((m: any) => (
-              <Group key={m.id} justify="space-between">
+              <div key={m.id} className="flex items-center justify-between gap-x-4">
                 <div>
-                  <Text size="sm" fw={500}>
-                    {m.title}
-                  </Text>
-                  <Text size="xs" c="dimmed">
+                  <p className="text-sm/6 font-medium text-gray-900">{m.title}</p>
+                  <p className="text-xs/5 text-gray-500">
                     {new Date(m.scheduled_start).toLocaleString()} -{" "}
                     {new Date(m.scheduled_end).toLocaleString()}
-                  </Text>
+                  </p>
                 </div>
-                <Badge color="blue" variant="light">
-                  {m.status}
-                </Badge>
-              </Group>
+                <Badge tone="blue">{m.status}</Badge>
+              </div>
             ))}
-          </Stack>
-        </Paper>
+          </div>
+        </Card>
       )}
-    </Stack>
+    </div>
   );
 }

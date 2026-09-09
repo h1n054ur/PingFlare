@@ -1,21 +1,19 @@
 import { useState, useEffect } from "react";
-import {
-  Table,
-  Button,
-  Group,
-  Text,
-  Modal,
-  TextInput,
-  Stack,
-  Badge,
-  ActionIcon,
-  Paper,
-  Loader,
-  Center,
-  MultiSelect,
-} from "@mantine/core";
-import { IconPlus, IconTrash, IconMail } from "@tabler/icons-react";
+import { EnvelopeIcon, PlusIcon, TrashIcon, UsersIcon } from "@heroicons/react/24/outline";
 import { api } from "../../lib/api";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Select,
+  Table,
+  Td,
+  Th,
+} from "../../components/ui";
 
 export default function AdminSubscribers() {
   const [subscribers, setSubscribers] = useState<any[]>([]);
@@ -56,98 +54,124 @@ export default function AdminSubscribers() {
 
   if (loading)
     return (
-      <Center py="xl">
-        <Loader />
-      </Center>
+      <div className="flex justify-center py-16">
+        <div className="size-8 animate-spin rounded-full border-2 border-gray-300 border-t-indigo-600" />
+      </div>
     );
 
   return (
-    <Stack gap="lg">
-      <Group justify="space-between">
-        <Text fw={700} size="xl">
-          Subscribers
-        </Text>
-        <Button leftSection={<IconPlus size={16} />} onClick={() => setModalOpen(true)}>
-          Add Subscriber
-        </Button>
-      </Group>
+    <div className="space-y-8">
+      <PageHeader
+        title="Subscribers"
+        actions={
+          <Button onClick={() => setModalOpen(true)}>
+            <PlusIcon aria-hidden="true" className="size-4" />
+            Add Subscriber
+          </Button>
+        }
+      />
 
-      <Paper withBorder>
-        <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Email</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th>Components</Table.Th>
-              <Table.Th>Subscribed</Table.Th>
-              <Table.Th>Actions</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
+      {subscribers.length === 0 ? (
+        <EmptyState
+          icon={<UsersIcon aria-hidden="true" className="size-6" />}
+          title="No subscribers yet"
+          description="Add subscribers to notify them about incidents and maintenance."
+          action={
+            <Button onClick={() => setModalOpen(true)}>
+              <PlusIcon aria-hidden="true" className="size-4" />
+              Add Subscriber
+            </Button>
+          }
+        />
+      ) : (
+        <Table>
+          <thead>
+            <tr>
+              <Th>Email</Th>
+              <Th>Status</Th>
+              <Th>Components</Th>
+              <Th>Subscribed</Th>
+              <Th>Actions</Th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
             {subscribers.map((s) => (
-              <Table.Tr key={s.id}>
-                <Table.Td>
-                  <Group gap="xs">
-                    <IconMail size={14} />
-                    <Text size="sm">{s.email}</Text>
-                  </Group>
-                </Table.Td>
-                <Table.Td>
-                  <Badge color={!!s.verified ? "green" : "yellow"} variant="light">
+              <tr key={s.id}>
+                <Td>
+                  <div className="flex items-center gap-x-2">
+                    <EnvelopeIcon aria-hidden="true" className="size-4 shrink-0 text-gray-400" />
+                    <span className="truncate">{s.email}</span>
+                  </div>
+                </Td>
+                <Td>
+                  <Badge tone={!!s.verified ? "green" : "yellow"}>
                     {!!s.verified ? "Verified" : "Pending"}
                   </Badge>
-                </Table.Td>
-                <Table.Td>
+                </Td>
+                <Td>
                   {s.components ? (
-                    <Text size="sm" truncate maw={200}>
+                    <span className="block max-w-[200px] truncate">
                       {JSON.parse(s.components).length} components
-                    </Text>
+                    </span>
                   ) : (
-                    <Text size="sm" c="dimmed">
-                      All
-                    </Text>
+                    <span className="text-gray-500">All</span>
                   )}
-                </Table.Td>
-                <Table.Td>{new Date(s.created_at).toLocaleDateString()}</Table.Td>
-                <Table.Td>
-                  <ActionIcon variant="subtle" color="red" onClick={() => handleDelete(s.id)}>
-                    <IconTrash size={16} />
-                  </ActionIcon>
-                </Table.Td>
-              </Table.Tr>
+                </Td>
+                <Td>{new Date(s.created_at).toLocaleDateString()}</Td>
+                <Td>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                    onClick={() => handleDelete(s.id)}
+                  >
+                    <TrashIcon aria-hidden="true" className="size-4" />
+                    <span className="sr-only">Delete</span>
+                  </Button>
+                </Td>
+              </tr>
             ))}
-          </Table.Tbody>
+          </tbody>
         </Table>
-        {subscribers.length === 0 && (
-          <Text ta="center" py="xl" c="dimmed">
-            No subscribers yet.
-          </Text>
-        )}
-      </Paper>
+      )}
 
-      <Modal opened={modalOpen} onClose={() => setModalOpen(false)} title="Add Subscriber">
-        <Stack gap="md">
-          <TextInput
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <MultiSelect
-            label="Component Subscriptions (optional)"
-            value={componentIds}
-            onChange={setComponentIds}
-            data={components.map((c: any) => ({ value: c.id, label: c.name }))}
-          />
-          <Group justify="flex-end">
-            <Button variant="light" onClick={() => setModalOpen(false)}>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add Subscriber">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleAdd();
+          }}
+          className="space-y-5"
+        >
+          <Field label="Email" required>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </Field>
+          <Field label="Component Subscriptions (optional)">
+            <Select
+              multiple
+              value={componentIds}
+              onChange={(e) => setComponentIds(Array.from(e.target.selectedOptions, (o) => o.value))}
+              className="h-32"
+            >
+              {components.map((c: any) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <div className="flex justify-end gap-x-3">
+            <Button variant="secondary" type="button" onClick={() => setModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAdd}>Add</Button>
-          </Group>
-        </Stack>
+            <Button type="submit">Add</Button>
+          </div>
+        </form>
       </Modal>
-    </Stack>
+    </div>
   );
 }

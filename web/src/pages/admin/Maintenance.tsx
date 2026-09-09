@@ -1,23 +1,20 @@
 import { useState, useEffect } from "react";
-import {
-  Table,
-  Button,
-  Group,
-  Text,
-  Modal,
-  TextInput,
-  Textarea,
-  MultiSelect,
-  Stack,
-  Badge,
-  ActionIcon,
-  Paper,
-  Loader,
-  Center,
-  Select,
-} from "@mantine/core";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { PlusIcon, TrashIcon, WrenchScrewdriverIcon } from "@heroicons/react/24/outline";
 import { api } from "../../lib/api";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Select,
+  Table,
+  Td,
+  Textarea,
+  Th,
+} from "../../components/ui";
 
 const maintenanceStatuses = [
   { value: "scheduled", label: "Scheduled" },
@@ -26,13 +23,16 @@ const maintenanceStatuses = [
   { value: "completed", label: "Completed" },
 ];
 
-const statusColor = (s: string) => {
+const statusTone = (s: string): "blue" | "yellow" | "green" | "gray" => {
   if (s === "scheduled") return "blue";
   if (s === "in_progress") return "yellow";
-  if (s === "verifying") return "orange";
+  if (s === "verifying") return "yellow";
   if (s === "completed") return "green";
   return "gray";
 };
+
+const statusLabel = (s: string) =>
+  maintenanceStatuses.find((x) => x.value === s)?.label || s;
 
 export default function AdminMaintenance() {
   const [maintenances, setMaintenances] = useState<any[]>([]);
@@ -103,118 +103,160 @@ export default function AdminMaintenance() {
 
   if (loading)
     return (
-      <Center py="xl">
-        <Loader />
-      </Center>
+      <div className="flex justify-center py-16">
+        <div className="size-8 animate-spin rounded-full border-2 border-gray-300 border-t-indigo-600" />
+      </div>
     );
 
   return (
-    <Stack gap="lg">
-      <Group justify="space-between">
-        <Text fw={700} size="xl">
-          Scheduled Maintenance
-        </Text>
-        <Button leftSection={<IconPlus size={16} />} onClick={openCreate}>
-          Schedule Maintenance
-        </Button>
-      </Group>
+    <div className="space-y-8">
+      <PageHeader
+        title="Scheduled Maintenance"
+        actions={
+          <Button onClick={openCreate}>
+            <PlusIcon aria-hidden="true" className="size-4" />
+            Schedule Maintenance
+          </Button>
+        }
+      />
 
-      <Paper withBorder>
-        <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Title</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th>Start</Table.Th>
-              <Table.Th>End</Table.Th>
-              <Table.Th>Components</Table.Th>
-              <Table.Th>Actions</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
+      {maintenances.length === 0 ? (
+        <EmptyState
+          icon={<WrenchScrewdriverIcon aria-hidden="true" className="size-6" />}
+          title="No scheduled maintenance"
+          description="Schedule maintenance windows to notify subscribers of upcoming downtime."
+          action={
+            <Button onClick={openCreate}>
+              <PlusIcon aria-hidden="true" className="size-4" />
+              Schedule Maintenance
+            </Button>
+          }
+        />
+      ) : (
+        <Table>
+          <thead>
+            <tr>
+              <Th>Title</Th>
+              <Th>Status</Th>
+              <Th>Start</Th>
+              <Th>End</Th>
+              <Th>Components</Th>
+              <Th>Actions</Th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
             {maintenances.map((m) => (
-              <Table.Tr key={m.id}>
-                <Table.Td fw={500}>{m.title}</Table.Td>
-                <Table.Td>
-                  <Select
-                    size="xs"
-                    variant="unstyled"
-                    value={m.status}
-                    onChange={(v) => updateStatus(m.id, v || "scheduled")}
-                    data={maintenanceStatuses}
-                    styles={{ input: { color: "inherit" } }}
-                  />
-                </Table.Td>
-                <Table.Td>{new Date(m.scheduled_start).toLocaleString()}</Table.Td>
-                <Table.Td>{new Date(m.scheduled_end).toLocaleString()}</Table.Td>
-                <Table.Td>
-                  <Badge variant="outline" size="sm">
+              <tr key={m.id}>
+                <Td className="font-medium">{m.title}</Td>
+                <Td>
+                  <div className="flex items-center gap-x-2">
+                    <Badge tone={statusTone(m.status)}>{statusLabel(m.status)}</Badge>
+                    <select
+                      value={m.status}
+                      onChange={(e) => updateStatus(m.id, e.target.value)}
+                      className="rounded-md bg-white py-0.5 pl-2 pr-7 text-xs text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600"
+                    >
+                      {maintenanceStatuses.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </Td>
+                <Td>{new Date(m.scheduled_start).toLocaleString()}</Td>
+                <Td>{new Date(m.scheduled_end).toLocaleString()}</Td>
+                <Td>
+                  <Badge>
                     {m.component_ids ? String(m.component_ids).split(",").length : 0} affected
                   </Badge>
-                </Table.Td>
-                <Table.Td>
-                  <ActionIcon variant="subtle" color="red" onClick={() => handleDelete(m.id)}>
-                    <IconTrash size={16} />
-                  </ActionIcon>
-                </Table.Td>
-              </Table.Tr>
+                </Td>
+                <Td>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                    onClick={() => handleDelete(m.id)}
+                  >
+                    <TrashIcon aria-hidden="true" className="size-4" />
+                    <span className="sr-only">Delete</span>
+                  </Button>
+                </Td>
+              </tr>
             ))}
-          </Table.Tbody>
+          </tbody>
         </Table>
-        {maintenances.length === 0 && (
-          <Text ta="center" py="xl" c="dimmed">
-            No scheduled maintenance.
-          </Text>
-        )}
-      </Paper>
+      )}
 
       <Modal
-        opened={modalOpen}
+        open={modalOpen}
         onClose={() => setModalOpen(false)}
         title="Schedule Maintenance"
-        size="lg"
+        wide
       >
-        <Stack gap="md">
-          <TextInput
-            label="Title"
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-            required
-          />
-          <Textarea
-            label="Description"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            rows={3}
-          />
-          <Group grow>
-            <TextInput
-              label="Start"
-              type="datetime-local"
-              value={form.scheduled_start}
-              onChange={(e) => setForm({ ...form, scheduled_start: e.target.value })}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
+          className="space-y-5"
+        >
+          <Field label="Title" required>
+            <Input
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
             />
-            <TextInput
-              label="End"
-              type="datetime-local"
-              value={form.scheduled_end}
-              onChange={(e) => setForm({ ...form, scheduled_end: e.target.value })}
+          </Field>
+          <Field label="Description">
+            <Textarea
+              rows={3}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
-          </Group>
-          <MultiSelect
-            label="Affected Components"
-            value={form.component_ids}
-            onChange={(v) => setForm({ ...form, component_ids: v })}
-            data={components.map((c: any) => ({ value: c.id, label: c.name }))}
-          />
-          <Group justify="flex-end">
-            <Button variant="light" onClick={() => setModalOpen(false)}>
+          </Field>
+          <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+            <Field label="Start">
+              <Input
+                type="datetime-local"
+                value={form.scheduled_start}
+                onChange={(e) => setForm({ ...form, scheduled_start: e.target.value })}
+              />
+            </Field>
+            <Field label="End">
+              <Input
+                type="datetime-local"
+                value={form.scheduled_end}
+                onChange={(e) => setForm({ ...form, scheduled_end: e.target.value })}
+              />
+            </Field>
+          </div>
+          <Field label="Affected Components">
+            <Select
+              multiple
+              value={form.component_ids}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  component_ids: Array.from(e.target.selectedOptions, (o) => o.value),
+                })
+              }
+              className="h-32"
+            >
+              {components.map((c: any) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <div className="flex justify-end gap-x-3">
+            <Button variant="secondary" type="button" onClick={() => setModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>Schedule</Button>
-          </Group>
-        </Stack>
+            <Button type="submit">Schedule</Button>
+          </div>
+        </form>
       </Modal>
-    </Stack>
+    </div>
   );
 }

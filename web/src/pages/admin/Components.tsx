@@ -1,26 +1,29 @@
 import { useState, useEffect } from "react";
 import {
-  Table,
-  Button,
-  Group,
-  Text,
-  Modal,
-  TextInput,
-  Select,
-  Switch,
-  NumberInput,
-  Stack,
-  Badge,
-  ActionIcon,
-  Paper,
-  Textarea,
-  Loader,
-  Center,
-  Tabs,
-  Tooltip,
-} from "@mantine/core";
-import { IconPlus, IconTrash, IconGripVertical } from "@tabler/icons-react";
+  Bars2Icon,
+  CheckIcon,
+  PlusIcon,
+  Squares2X2Icon,
+  TrashIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import { api } from "../../lib/api";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Select,
+  Table,
+  Td,
+  Textarea,
+  Th,
+  Toggle,
+  classNames,
+} from "../../components/ui";
 
 const statusOptions = [
   { value: "operational", label: "Operational" },
@@ -30,10 +33,12 @@ const statusOptions = [
   { value: "under_maintenance", label: "Under Maintenance" },
 ];
 
-const statusColor = (s: string) => {
+type StatusTone = "green" | "yellow" | "red" | "gray" | "blue";
+
+const statusColor = (s: string): StatusTone => {
   if (s === "operational") return "green";
   if (s === "degraded_performance") return "yellow";
-  if (s === "partial_outage") return "orange";
+  if (s === "partial_outage") return "yellow";
   if (s === "major_outage") return "red";
   if (s === "under_maintenance") return "blue";
   return "gray";
@@ -149,227 +154,289 @@ export default function AdminComponents() {
 
   if (loading)
     return (
-      <Center py="xl">
-        <Loader />
-      </Center>
+      <div className="flex justify-center py-16">
+        <div className="size-8 animate-spin rounded-full border-2 border-gray-300 border-t-indigo-600" />
+      </div>
     );
 
   return (
-    <Stack gap="lg">
-      <Text fw={700} size="xl">
-        Components & Groups
-      </Text>
+    <div className="space-y-8">
+      <PageHeader
+        title="Components & Groups"
+        subtitle="Manage the services and groups displayed on your status page"
+      />
 
-      <Tabs value={activeTab} onChange={setActiveTab}>
-        <Tabs.List>
-          <Tabs.Tab value="components">Components ({components.length})</Tabs.Tab>
-          <Tabs.Tab value="groups">Component Groups ({groups.length})</Tabs.Tab>
-        </Tabs.List>
+      <div>
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex gap-6">
+            <button
+              type="button"
+              onClick={() => setActiveTab("components")}
+              className={classNames(
+                activeTab === "components"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700",
+                "border-b-2 px-1 py-3 text-sm/6 font-medium"
+              )}
+            >
+              Components ({components.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("groups")}
+              className={classNames(
+                activeTab === "groups"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700",
+                "border-b-2 px-1 py-3 text-sm/6 font-medium"
+              )}
+            >
+              Component Groups ({groups.length})
+            </button>
+          </nav>
+        </div>
 
-        <Tabs.Panel value="components" pt="md">
-          <Group justify="flex-end" mb="md">
-            <Button leftSection={<IconPlus size={16} />} onClick={openCreateComp}>
-              Add Component
-            </Button>
-          </Group>
-          <Paper withBorder>
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Order</Table.Th>
-                  <Table.Th>Name</Table.Th>
-                  <Table.Th>Group</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                  <Table.Th>Show Uptime</Table.Th>
-                  <Table.Th>Actions</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {components.map((c) => (
-                  <Table.Tr key={c.id}>
-                    <Table.Td>
-                      <IconGripVertical size={14} color="gray" />
-                    </Table.Td>
-                    <Table.Td>
-                      <div>
-                        <Text fw={500}>{c.name}</Text>
+        {activeTab === "components" && (
+          <div className="mt-6">
+            <div className="mb-4 flex justify-end">
+              <Button onClick={openCreateComp}>
+                <PlusIcon aria-hidden="true" className="size-4" />
+                Add Component
+              </Button>
+            </div>
+            {components.length === 0 ? (
+              <EmptyState
+                icon={<Squares2X2Icon aria-hidden="true" className="size-6" />}
+                title="No components yet"
+                description="Add one to get started."
+              />
+            ) : (
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Order</Th>
+                    <Th>Name</Th>
+                    <Th>Group</Th>
+                    <Th>Status</Th>
+                    <Th>Show Uptime</Th>
+                    <Th>Actions</Th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {components.map((c) => (
+                    <tr key={c.id} className="hover:bg-gray-50">
+                      <Td>
+                        <Bars2Icon aria-hidden="true" className="size-4 text-gray-400" />
+                      </Td>
+                      <Td>
+                        <div className="font-medium text-gray-900">{c.name}</div>
                         {c.description && (
-                          <Text size="xs" c="dimmed">
-                            {c.description}
-                          </Text>
+                          <div className="mt-0.5 text-xs/5 text-gray-500">{c.description}</div>
                         )}
-                      </div>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge variant="outline" size="sm">
-                        {c.group_name || "Ungrouped"}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge color={statusColor(c.status)} variant="light">
-                        {c.status?.replace(/_/g, " ")}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Switch size="xs" checked={!!c.show_uptime} readOnly />
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap="xs">
-                        <ActionIcon variant="subtle" onClick={() => openEditComp(c)}>
-                          <Text size="xs">Edit</Text>
-                        </ActionIcon>
-                        <ActionIcon variant="subtle" color="red" onClick={() => deleteComp(c.id)}>
-                          <IconTrash size={16} />
-                        </ActionIcon>
-                      </Group>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-            {components.length === 0 && (
-              <Text ta="center" py="xl" c="dimmed">
-                No components yet. Add one to get started.
-              </Text>
+                      </Td>
+                      <Td>
+                        <Badge tone="gray">{c.group_name || "Ungrouped"}</Badge>
+                      </Td>
+                      <Td>
+                        <Badge tone={statusColor(c.status)}>{c.status?.replace(/_/g, " ")}</Badge>
+                      </Td>
+                      <Td>
+                        {c.show_uptime ? (
+                          <CheckIcon aria-hidden="true" className="size-4 text-green-600" />
+                        ) : (
+                          <XMarkIcon aria-hidden="true" className="size-4 text-gray-400" />
+                        )}
+                      </Td>
+                      <Td>
+                        <div className="flex gap-x-2">
+                          <Button variant="ghost" size="sm" onClick={() => openEditComp(c)}>
+                            Edit
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => deleteComp(c.id)}>
+                            <TrashIcon aria-hidden="true" className="size-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
             )}
-          </Paper>
-        </Tabs.Panel>
+          </div>
+        )}
 
-        <Tabs.Panel value="groups" pt="md">
-          <Group justify="flex-end" mb="md">
-            <Button leftSection={<IconPlus size={16} />} onClick={openCreateGroup}>
-              Add Group
-            </Button>
-          </Group>
-          <Paper withBorder>
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Order</Table.Th>
-                  <Table.Th>Name</Table.Th>
-                  <Table.Th>Description</Table.Th>
-                  <Table.Th>Components</Table.Th>
-                  <Table.Th>Actions</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {groups.map((g) => {
-                  const memberCount = components.filter((c) => c.group_id === g.id).length;
-                  return (
-                    <Table.Tr key={g.id}>
-                      <Table.Td>{g.sort_order}</Table.Td>
-                      <Table.Td fw={500}>{g.name}</Table.Td>
-                      <Table.Td c="dimmed">{g.description || "-"}</Table.Td>
-                      <Table.Td>{memberCount}</Table.Td>
-                      <Table.Td>
-                        <Group gap="xs">
-                          <ActionIcon variant="subtle" onClick={() => openEditGroup(g)}>
-                            <Text size="xs">Edit</Text>
-                          </ActionIcon>
-                          <ActionIcon variant="subtle" color="red" onClick={() => deleteGroup(g.id)}>
-                            <IconTrash size={16} />
-                          </ActionIcon>
-                        </Group>
-                      </Table.Td>
-                    </Table.Tr>
-                  );
-                })}
-              </Table.Tbody>
-            </Table>
-            {groups.length === 0 && (
-              <Text ta="center" py="xl" c="dimmed">
-                No component groups yet.
-              </Text>
+        {activeTab === "groups" && (
+          <div className="mt-6">
+            <div className="mb-4 flex justify-end">
+              <Button onClick={openCreateGroup}>
+                <PlusIcon aria-hidden="true" className="size-4" />
+                Add Group
+              </Button>
+            </div>
+            {groups.length === 0 ? (
+              <EmptyState
+                icon={<Squares2X2Icon aria-hidden="true" className="size-6" />}
+                title="No component groups yet"
+              />
+            ) : (
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Order</Th>
+                    <Th>Name</Th>
+                    <Th>Description</Th>
+                    <Th>Components</Th>
+                    <Th>Actions</Th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {groups.map((g) => {
+                    const memberCount = components.filter((c) => c.group_id === g.id).length;
+                    return (
+                      <tr key={g.id} className="hover:bg-gray-50">
+                        <Td>{g.sort_order}</Td>
+                        <Td className="font-medium text-gray-900">{g.name}</Td>
+                        <Td className="text-gray-500">{g.description || "-"}</Td>
+                        <Td>{memberCount}</Td>
+                        <Td>
+                          <div className="flex gap-x-2">
+                            <Button variant="ghost" size="sm" onClick={() => openEditGroup(g)}>
+                              Edit
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => deleteGroup(g.id)}>
+                              <TrashIcon aria-hidden="true" className="size-4 text-red-600" />
+                            </Button>
+                          </div>
+                        </Td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </Table>
             )}
-          </Paper>
-        </Tabs.Panel>
-      </Tabs>
+          </div>
+        )}
+      </div>
 
-      {/* Component Modal */}
       <Modal
-        opened={compModalOpen}
+        open={compModalOpen}
         onClose={() => setCompModalOpen(false)}
         title={editingComp ? "Edit Component" : "Add Component"}
       >
-        <Stack gap="md">
-          <TextInput
-            label="Name"
-            value={compForm.name}
-            onChange={(e) => setCompForm({ ...compForm, name: e.target.value })}
-            required
-          />
-          <Textarea
-            label="Description"
-            value={compForm.description}
-            onChange={(e) => setCompForm({ ...compForm, description: e.target.value })}
-            rows={2}
-          />
-          <Select
-            label="Group"
-            value={compForm.group_id}
-            onChange={(v) => setCompForm({ ...compForm, group_id: v || "" })}
-            data={groups.map((g) => ({ value: g.id, label: g.name }))}
-            clearable
-          />
-          <Select
-            label="Status Override"
-            value={compForm.status}
-            onChange={(v) => setCompForm({ ...compForm, status: v || "operational" })}
-            data={statusOptions}
-          />
-          <NumberInput
-            label="Sort Order"
-            value={compForm.sort_order}
-            onChange={(v) => setCompForm({ ...compForm, sort_order: typeof v === "number" ? v : 0 })}
-            min={0}
-          />
-          <Switch
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveComp();
+          }}
+          className="space-y-5"
+        >
+          <Field label="Name" required>
+            <Input
+              value={compForm.name}
+              onChange={(e) => setCompForm({ ...compForm, name: e.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Description">
+            <Textarea
+              rows={2}
+              value={compForm.description}
+              onChange={(e) => setCompForm({ ...compForm, description: e.target.value })}
+            />
+          </Field>
+          <Field label="Group">
+            <Select
+              value={compForm.group_id}
+              onChange={(e) => setCompForm({ ...compForm, group_id: e.target.value })}
+            >
+              <option value="">No group</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Status Override">
+            <Select
+              value={compForm.status}
+              onChange={(e) => setCompForm({ ...compForm, status: e.target.value })}
+            >
+              {statusOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Sort Order">
+            <Input
+              type="number"
+              min={0}
+              value={compForm.sort_order}
+              onChange={(e) =>
+                setCompForm({ ...compForm, sort_order: parseInt(e.target.value, 10) || 0 })
+              }
+            />
+          </Field>
+          <Toggle
             label="Show uptime bar"
             checked={compForm.show_uptime}
-            onChange={(e) => setCompForm({ ...compForm, show_uptime: e.currentTarget.checked })}
+            onChange={(v) => setCompForm({ ...compForm, show_uptime: v })}
           />
-          <Group justify="flex-end">
-            <Button variant="light" onClick={() => setCompModalOpen(false)}>
+          <div className="flex justify-end gap-x-3">
+            <Button type="button" variant="secondary" onClick={() => setCompModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={saveComp}>{editingComp ? "Save" : "Create"}</Button>
-          </Group>
-        </Stack>
+            <Button type="submit">{editingComp ? "Save" : "Create"}</Button>
+          </div>
+        </form>
       </Modal>
 
-      {/* Group Modal */}
       <Modal
-        opened={groupModalOpen}
+        open={groupModalOpen}
         onClose={() => setGroupModalOpen(false)}
         title={editingGroup ? "Edit Group" : "Add Group"}
       >
-        <Stack gap="md">
-          <TextInput
-            label="Name"
-            value={groupForm.name}
-            onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
-            required
-          />
-          <Textarea
-            label="Description"
-            value={groupForm.description}
-            onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })}
-            rows={2}
-          />
-          <NumberInput
-            label="Sort Order"
-            value={groupForm.sort_order}
-            onChange={(v) => setGroupForm({ ...groupForm, sort_order: typeof v === "number" ? v : 0 })}
-            min={0}
-          />
-          <Group justify="flex-end">
-            <Button variant="light" onClick={() => setGroupModalOpen(false)}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveGroup();
+          }}
+          className="space-y-5"
+        >
+          <Field label="Name" required>
+            <Input
+              value={groupForm.name}
+              onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Description">
+            <Textarea
+              rows={2}
+              value={groupForm.description}
+              onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })}
+            />
+          </Field>
+          <Field label="Sort Order">
+            <Input
+              type="number"
+              min={0}
+              value={groupForm.sort_order}
+              onChange={(e) =>
+                setGroupForm({ ...groupForm, sort_order: parseInt(e.target.value, 10) || 0 })
+              }
+            />
+          </Field>
+          <div className="flex justify-end gap-x-3">
+            <Button type="button" variant="secondary" onClick={() => setGroupModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={saveGroup}>{editingGroup ? "Save" : "Create"}</Button>
-          </Group>
-        </Stack>
+            <Button type="submit">{editingGroup ? "Save" : "Create"}</Button>
+          </div>
+        </form>
       </Modal>
-    </Stack>
+    </div>
   );
 }

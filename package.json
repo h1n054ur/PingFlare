@@ -17,12 +17,10 @@
     "format": "prettier --write web/src/**/*.{ts,tsx,css}"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.10",
+    "@heroicons/react": "^2.2.0",
     "@hono/zod-validator": "^0.5.0",
-    "@mantine/core": "^9.0.0",
-    "@mantine/hooks": "^9.0.0",
-    "@mantine/modals": "^9.0.0",
-    "@mantine/notifications": "^9.0.0",
-    "@tabler/icons-react": "^3.46.0",
+    "@tailwindcss/vite": "^4.3.3",
     "better-auth": "^1.7.3",
     "better-auth-cloudflare": "^0.3.1",
     "chart.js": "^4.5.1",
@@ -35,6 +33,7 @@
     "react-dom": "^19.0.0",
     "react-i18next": "^17.0.0",
     "react-router-dom": "^7.0.0",
+    "tailwindcss": "^4.3.3",
     "zod": "^3.24.0"
   },
   "devDependencies": {

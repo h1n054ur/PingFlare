@@ -1,24 +1,67 @@
 import { useState, useEffect } from "react";
-import { Container, Text, Group, Badge, Paper, Stack, SimpleGrid, Anchor, Box, ThemeIcon, Loader, Tooltip, ActionIcon } from "@mantine/core";
-import { IconCheck, IconAlertTriangle, IconAlertCircle, IconClock, IconRefresh, IconChevronDown } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
+import {
+  CheckCircleIcon,
+  ChevronDownIcon,
+  ClockIcon,
+  ExclamationTriangleIcon,
+  EyeIcon,
+  MagnifyingGlassIcon,
+  XCircleIcon,
+} from "@heroicons/react/24/outline";
 import { useStatusPage, useIncidents } from "../hooks/useStatusPage";
-import { UptimeBarChart, LatencyLineChart } from "../components/charts/UptimeCharts";
+import { UptimeBarChart } from "../components/charts/UptimeCharts";
+import { classNames } from "../components/ui";
 
-const statusColors: Record<string, string> = {
+type StatusTone = "green" | "yellow" | "orange" | "red" | "blue" | "gray";
+
+const statusTone: Record<string, StatusTone> = {
   operational: "green",
   degraded_performance: "yellow",
   partial_outage: "orange",
   major_outage: "red",
   under_maintenance: "blue",
+  investigating: "blue",
+  monitoring: "blue",
+  resolved: "green",
 };
 
-const statusIcons: Record<string, typeof IconCheck> = {
-  operational: IconCheck,
-  degraded_performance: IconAlertTriangle,
-  partial_outage: IconAlertCircle,
-  major_outage: IconAlertCircle,
-  under_maintenance: IconClock,
+const statusIcon: Record<string, typeof CheckCircleIcon> = {
+  operational: CheckCircleIcon,
+  degraded_performance: ExclamationTriangleIcon,
+  partial_outage: ExclamationTriangleIcon,
+  major_outage: XCircleIcon,
+  under_maintenance: ClockIcon,
+  investigating: MagnifyingGlassIcon,
+  monitoring: EyeIcon,
+  resolved: CheckCircleIcon,
+};
+
+const badgeTones: Record<StatusTone, string> = {
+  green: "bg-green-50 text-green-700 ring-green-600/20",
+  yellow: "bg-yellow-50 text-yellow-800 ring-yellow-600/20",
+  orange: "bg-orange-50 text-orange-700 ring-orange-600/20",
+  red: "bg-red-50 text-red-700 ring-red-600/20",
+  blue: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  gray: "bg-gray-50 text-gray-600 ring-gray-500/20",
+};
+
+const bannerTones: Record<StatusTone, string> = {
+  green: "bg-green-50 text-green-900 ring-green-600/20",
+  yellow: "bg-yellow-50 text-yellow-900 ring-yellow-600/25",
+  orange: "bg-orange-50 text-orange-900 ring-orange-600/25",
+  red: "bg-red-50 text-red-900 ring-red-600/20",
+  blue: "bg-blue-50 text-blue-900 ring-blue-600/20",
+  gray: "bg-gray-50 text-gray-900 ring-gray-500/20",
+};
+
+const iconTones: Record<StatusTone, string> = {
+  green: "text-green-600",
+  yellow: "text-yellow-600",
+  orange: "text-orange-600",
+  red: "text-red-600",
+  blue: "text-blue-600",
+  gray: "text-gray-500",
 };
 
 function formatDate(iso: string): string {
@@ -32,12 +75,18 @@ function formatDate(iso: string): string {
 }
 
 function StatusIndicator({ status }: { status: string }) {
-  const color = statusColors[status] || "gray";
-  const Icon = statusIcons[status] || IconCheck;
+  const tone = statusTone[status] || "gray";
+  const Icon = statusIcon[status] || CheckCircleIcon;
   return (
-    <Badge color={color} variant="light" leftSection={<Icon size={14} />}>
+    <span
+      className={classNames(
+        "inline-flex items-center gap-x-1.5 rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset",
+        badgeTones[tone]
+      )}
+    >
+      <Icon aria-hidden="true" className="size-3.5" />
       {status.replace(/_/g, " ")}
-    </Badge>
+    </span>
   );
 }
 
@@ -48,17 +97,19 @@ function ComponentGroup({
   groupName: string | null;
   components: any[];
 }) {
-  const { t } = useTranslation();
-
   return (
-    <Paper p="md" withBorder>
-      {groupName && <Text fw={600} mb="xs">{groupName}</Text>}
-      <Stack gap="xs">
-        {components.map((comp) => (
-          <ComponentRow key={comp.id} component={comp} indent={!!groupName} />
+    <div className="rounded-2xl bg-white p-6 shadow-xs ring-1 ring-gray-900/5">
+      {groupName && (
+        <h3 className="text-sm/6 font-semibold text-gray-900">{groupName}</h3>
+      )}
+      <div className={classNames(groupName && "mt-3", "space-y-3 divide-y divide-gray-100")}>
+        {components.map((comp, i) => (
+          <div key={comp.id} className={classNames(i > 0 && "pt-3")}>
+            <ComponentRow component={comp} indent={!!groupName} />
+          </div>
         ))}
-      </Stack>
-    </Paper>
+      </div>
+    </div>
   );
 }
 
@@ -92,93 +143,113 @@ function ComponentRow({ component, indent }: { component: any; indent: boolean }
   }, [open, monitorId]);
 
   return (
-    <Box pl={indent ? "md" : 0}>
-      <Group justify="space-between">
-        <Group gap="xs">
-          {indent && <Text size="sm">{component.name}</Text>}
-          {!indent && <Text size="sm" fw={500}>{component.name}</Text>}
+    <div className={indent ? "pl-4 sm:pl-6" : undefined}>
+      <div className="flex items-center justify-between gap-x-4">
+        <div className="flex items-center gap-x-1">
+          <span
+            className={classNames(
+              "text-sm/6",
+              indent ? "text-gray-600" : "font-medium text-gray-900"
+            )}
+          >
+            {component.name}
+          </span>
           {monitorId && (
-            <ActionIcon size="sm" variant="subtle" onClick={() => setOpen(!open)}>
-              <IconChevronDown size={14} style={{ transform: open ? "rotate(180deg)" : "none" }} />
-            </ActionIcon>
+            <button
+              type="button"
+              onClick={() => setOpen(!open)}
+              className="-m-1.5 rounded-md p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+            >
+              <span className="sr-only">Toggle uptime details</span>
+              <ChevronDownIcon
+                aria-hidden="true"
+                className={classNames("size-4 transition-transform", open && "rotate-180")}
+              />
+            </button>
           )}
-        </Group>
+        </div>
         <StatusIndicator status={component.status} />
-      </Group>
+      </div>
       {open && uptimeData && (
-        <>
-          <Stack gap="sm" mt="xs">
-            <Group gap="lg">
-              <div>
-                <Text size="xs" c="dimmed">{t("Uptime")}</Text>
-                <Text fw={700} size="lg">
-                  {uptimeData.stats.uptime_percent.toFixed(2)}%
-                </Text>
-              </div>
-              <div>
-                <Text size="xs" c="dimmed">{t("Response Time")}</Text>
-                <Text fw={700} size="lg">
-                  {uptimeData.stats.avg_response_time}ms
-                </Text>
-              </div>
-            </Group>
-            <Text size="sm" fw={600}>{t("Past 90 Days")}</Text>
-            <UptimeBarChart data={uptimeData.bars} />
-          </Stack>
+        <div className="mt-4 space-y-4">
+          <div className="flex gap-x-10">
+            <div>
+              <p className="text-xs/5 text-gray-500">{t("Uptime")}</p>
+              <p className="mt-0.5 text-lg font-bold text-gray-900">
+                {uptimeData.stats.uptime_percent.toFixed(2)}%
+              </p>
+            </div>
+            <div>
+              <p className="text-xs/5 text-gray-500">{t("Response Time")}</p>
+              <p className="mt-0.5 text-lg font-bold text-gray-900">
+                {uptimeData.stats.avg_response_time}ms
+              </p>
+            </div>
+          </div>
+          <p className="text-sm/6 font-semibold text-gray-900">{t("Past 90 Days")}</p>
+          <UptimeBarChart data={uptimeData.bars} />
           {loading && (
-            <Box ta="center" py="sm"><Loader size="sm" /></Box>
+            <div className="flex justify-center py-2">
+              <div className="size-5 animate-spin rounded-full border-2 border-gray-300 border-t-indigo-600" />
+            </div>
           )}
-        </>
+        </div>
       )}
       {open && !uptimeData && (
-        <Box py="sm">
+        <div className="mt-3 py-2">
           {loading ? (
-            <Box ta="center"><Loader size="sm" /></Box>
+            <div className="flex justify-center">
+              <div className="size-5 animate-spin rounded-full border-2 border-gray-300 border-t-indigo-600" />
+            </div>
           ) : (
-            <Text size="xs" c="dimmed">No monitor data</Text>
+            <p className="text-xs/5 text-gray-500">No monitor data</p>
           )}
-        </Box>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }
 
 function IncidentCard({ incident }: { incident: any }) {
-  const { t } = useTranslation();
   return (
-    <Paper p="md" withBorder>
-      <Group justify="space-between" mb="xs">
-        <Text fw={600}>{incident.name}</Text>
+    <div className="rounded-2xl bg-white p-6 shadow-xs ring-1 ring-gray-900/5">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h3 className="text-sm/6 font-semibold text-gray-900">{incident.name}</h3>
         <StatusIndicator status={incident.status} />
-      </Group>
-      <Text size="sm" c="dimmed">
-        {formatDate(incident.created_at)}
-      </Text>
+      </div>
+      <p className="mt-2 text-xs/5 text-gray-500">{formatDate(incident.created_at)}</p>
       {incident.component_ids?.length > 0 && (
-        <Group mt="xs" gap="xs">
+        <div className="mt-3 flex flex-wrap gap-x-2 gap-y-1.5">
           {incident.component_ids.map((id: string) => (
-            <Badge key={id} size="sm" variant="outline">{id.slice(0, 8)}</Badge>
+            <span
+              key={id}
+              className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-500/20 ring-inset"
+            >
+              {id.slice(0, 8)}
+            </span>
           ))}
-        </Group>
+        </div>
       )}
-    </Paper>
+    </div>
   );
 }
 
 function MaintenanceCard({ maintenance }: { maintenance: any }) {
   return (
-    <Paper p="md" withBorder>
-      <Group justify="space-between" mb="xs">
-        <Text fw={600}>{maintenance.name}</Text>
-        <Badge color="blue" variant="light">{maintenance.status}</Badge>
-      </Group>
+    <div className="rounded-2xl bg-white p-6 shadow-xs ring-1 ring-gray-900/5">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h3 className="text-sm/6 font-semibold text-gray-900">{maintenance.name}</h3>
+        <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-blue-600/20 ring-inset">
+          {maintenance.status}
+        </span>
+      </div>
       {maintenance.description && (
-        <Text size="sm" c="dimmed" mb="xs">{maintenance.description}</Text>
+        <p className="mt-2 text-sm/6 text-gray-500">{maintenance.description}</p>
       )}
-      <Text size="sm" c="dimmed">
+      <p className="mt-2 text-xs/5 text-gray-500">
         {formatDate(maintenance.scheduled_at)} - {formatDate(maintenance.scheduled_until)}
-      </Text>
-    </Paper>
+      </p>
+    </div>
   );
 }
 
@@ -201,42 +272,28 @@ function SubscribeForm() {
 
   if (submitted) {
     return (
-      <Text c="green" ta="center">
+      <p className="text-center text-sm/6 font-medium text-green-700">
         {t("Subscribe")} - check your email to verify.
-      </Text>
+      </p>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <Group>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder={t("Email Address")}
-          required
-          style={{
-            flex: 1,
-            padding: "8px 12px",
-            borderRadius: "6px",
-            border: "1px solid var(--mantine-color-gray-4)",
-          }}
-        />
-        <button
-          type="submit"
-          style={{
-            padding: "8px 16px",
-            borderRadius: "6px",
-            border: "none",
-            background: "var(--mantine-color-blue-6)",
-            color: "white",
-            cursor: "pointer",
-          }}
-        >
-          {t("Subscribe")}
-        </button>
-      </Group>
+    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row sm:gap-x-3">
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder={t("Email Address")}
+        required
+        className="block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+      />
+      <button
+        type="submit"
+        className="mt-3 flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm/6 font-semibold text-white shadow-xs hover:bg-indigo-500 sm:mt-0 sm:shrink-0"
+      >
+        {t("Subscribe")}
+      </button>
     </form>
   );
 }
@@ -248,17 +305,17 @@ export default function StatusPage() {
 
   if (loading) {
     return (
-      <Container size="md" py="xl" ta="center">
-        <Loader size="lg" />
-      </Container>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="size-10 animate-spin rounded-full border-2 border-gray-300 border-t-indigo-600" />
+      </div>
     );
   }
 
   if (error || !data) {
     return (
-      <Container size="md" py="xl" ta="center">
-        <Text c="red">{error || "Failed to load status"}</Text>
-      </Container>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+        <p className="text-sm/6 font-medium text-red-600">{error || "Failed to load status"}</p>
+      </div>
     );
   }
 
@@ -269,77 +326,75 @@ export default function StatusPage() {
     groupedComponents[group].push(comp);
   }
 
-  const statusBg: Record<string, string> = {
-    operational: "var(--mantine-color-green-1)",
-    degraded_performance: "var(--mantine-color-yellow-1)",
-    partial_outage: "var(--mantine-color-orange-1)",
-    major_outage: "var(--mantine-color-red-1)",
-    under_maintenance: "var(--mantine-color-blue-1)",
-  };
+  const overallTone = statusTone[data.status.status] || "gray";
+  const OverallIcon = statusIcon[data.status.status] || CheckCircleIcon;
 
   return (
-    <Box bg="gray.0" mih="100vh">
-      <Paper
-        p="xl"
-        radius={0}
-        style={{ background: statusBg[data.status.status] || "var(--mantine-color-green-1)" }}
-      >
-        <Container size="md">
-          <Group justify="space-between" align="center">
-            <Stack gap={0}>
-              <Text fw={700} size="xl">
-                {t(data.status.description)}
-              </Text>
-              <Text size="sm" c="dimmed">
-                {t("Last updated")}: {formatDate(data.page.updated_at)}
-              </Text>
-            </Stack>
-            <ThemeIcon size="xl" variant="light" color={statusColors[data.status.status] || "green"}>
-              {(() => {
-                const Icon = statusIcons[data.status.status] || IconCheck;
-                return <Icon size={28} />;
-              })()}
-            </ThemeIcon>
-          </Group>
-        </Container>
-      </Paper>
+    <div className="min-h-screen bg-gray-50">
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+        <header className="flex items-center gap-x-3">
+          <svg viewBox="0 0 32 32" className="h-9 w-9" aria-hidden="true">
+            <rect x="2" y="2" width="28" height="28" rx="8" className="fill-indigo-500" />
+            <path
+              d="M7 16.5h5l2-5 4 10 2-5h5"
+              fill="none"
+              stroke="white"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className="text-xl font-semibold tracking-tight text-gray-900">
+            {data.page.name}
+          </span>
+        </header>
 
-      <Container size="md" py="xl">
-        <Stack gap="xl">
-          {/* Unresolved Incidents */}
+        <section
+          className={classNames(
+            "mt-8 flex items-center justify-between gap-x-6 rounded-2xl px-6 py-8 ring-1 ring-inset sm:px-10 sm:py-10",
+            bannerTones[overallTone]
+          )}
+        >
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              {t(data.status.description)}
+            </h1>
+            <p className="mt-2 text-sm/6 opacity-75">
+              {t("Last updated")}: {formatDate(data.page.updated_at)}
+            </p>
+          </div>
+          <OverallIcon
+            aria-hidden="true"
+            className={classNames("size-12 shrink-0 sm:size-16", iconTones[overallTone])}
+          />
+        </section>
+
+        <div className="mt-10 space-y-10">
           {data.incidents.length > 0 && (
-            <Box>
-              <Text fw={700} size="lg" mb="md">
-                {t("Active Incidents")}
-              </Text>
-              <Stack gap="sm">
+            <section>
+              <h2 className="text-lg font-semibold text-gray-900">{t("Active Incidents")}</h2>
+              <div className="mt-4 space-y-4">
                 {data.incidents.map((inc) => (
                   <IncidentCard key={inc.id} incident={inc} />
                 ))}
-              </Stack>
-            </Box>
+              </div>
+            </section>
           )}
 
-          {/* Scheduled Maintenance */}
           {data.scheduled_maintenances.length > 0 && (
-            <Box>
-              <Text fw={700} size="lg" mb="md">
-                {t("Scheduled Maintenance")}
-              </Text>
-              <Stack gap="sm">
+            <section>
+              <h2 className="text-lg font-semibold text-gray-900">{t("Scheduled Maintenance")}</h2>
+              <div className="mt-4 space-y-4">
                 {data.scheduled_maintenances.map((m) => (
                   <MaintenanceCard key={m.id} maintenance={m} />
                 ))}
-              </Stack>
-            </Box>
+              </div>
+            </section>
           )}
 
-          {/* Components */}
-          <Box>
-            <Text fw={700} size="lg" mb="md">
-              {t("Components")}
-            </Text>
-            <Stack gap="md">
+          <section>
+            <h2 className="text-lg font-semibold text-gray-900">{t("Components")}</h2>
+            <div className="mt-4 space-y-4">
               {Object.entries(groupedComponents).map(([group, comps]) => (
                 <ComponentGroup
                   key={group}
@@ -347,35 +402,35 @@ export default function StatusPage() {
                   components={comps}
                 />
               ))}
-            </Stack>
-          </Box>
+            </div>
+          </section>
 
-          {/* Subscribe */}
-          <Paper p="md" withBorder>
-            <Text fw={600} mb="sm">{t("Subscribe to Updates")}</Text>
-            <SubscribeForm />
-          </Paper>
+          <section className="rounded-2xl bg-white p-6 shadow-xs ring-1 ring-gray-900/5">
+            <h2 className="text-lg font-semibold text-gray-900">{t("Subscribe to Updates")}</h2>
+            <div className="mt-4">
+              <SubscribeForm />
+            </div>
+          </section>
 
-          {/* Past Incidents */}
           {pastIncidents.length > 0 && (
-            <Box>
-              <Text fw={700} size="lg" mb="md">
-                {t("Past Incidents")}
-              </Text>
-              <Stack gap="sm">
+            <section>
+              <h2 className="text-lg font-semibold text-gray-900">{t("Past Incidents")}</h2>
+              <div className="mt-4 space-y-4">
                 {pastIncidents.slice(0, 20).map((inc: any) => (
                   <IncidentCard key={inc.id} incident={inc} />
                 ))}
-              </Stack>
-            </Box>
+              </div>
+            </section>
           )}
 
-          {/* Footer */}
-          <Text ta="center" size="sm" c="dimmed" pt="md">
-            Powered by <Anchor href="/admin/login" size="sm">PingFlare</Anchor>
-          </Text>
-        </Stack>
-      </Container>
-    </Box>
+          <p className="pt-4 text-center text-sm/6 text-gray-500">
+            Powered by{" "}
+            <a href="/admin/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+              PingFlare
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

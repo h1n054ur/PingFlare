@@ -1,22 +1,34 @@
 import { useState, useEffect } from "react";
-import {
-  Stack,
-  Text,
-  Paper,
-  SimpleGrid,
-  TextInput,
-  Textarea,
-  Select,
-  Switch,
-  Button,
-  Loader,
-  Center,
-  Group,
-  Divider,
-  PasswordInput,
-} from "@mantine/core";
+import { useNavigate } from "react-router-dom";
+import { CheckIcon } from "@heroicons/react/24/solid";
+import { useSession, changePassword, signOut } from "../../lib/auth-client";
 import { api } from "../../lib/api";
-import { adminLogout } from "../../lib/api";
+import {
+  Alert,
+  Button,
+  Card,
+  Field,
+  Input,
+  PageHeader,
+  Select,
+  Textarea,
+  Toggle,
+} from "../../components/ui";
+import { PasswordField } from "../../components/PasswordField";
+
+const TIMEZONES = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Asia/Tokyo",
+  "Asia/Singapore",
+  "Australia/Sydney",
+];
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState<Record<string, string>>({});
@@ -47,182 +59,251 @@ export default function AdminSettings() {
     }
   };
 
-  if (loading)
+  if (loading) {
     return (
-      <Center py="xl">
-        <Loader />
-      </Center>
+      <div className="flex justify-center py-16">
+        <div className="size-8 animate-spin rounded-full border-2 border-gray-300 border-t-indigo-600" />
+      </div>
     );
+  }
 
   return (
-    <Stack gap="lg">
-      <Group justify="space-between">
-        <Text fw={700} size="xl">
-          Settings
-        </Text>
-        {saved && <Text c="green" size="sm">Saved!</Text>}
-      </Group>
+    <div className="space-y-8">
+      <PageHeader
+        title="Settings"
+        subtitle="Page configuration, appearance, and account security"
+        actions={
+          saved ? (
+            <span className="flex items-center gap-x-1.5 text-sm/6 font-medium text-green-600">
+              <CheckIcon className="size-4" /> Saved
+            </span>
+          ) : undefined
+        }
+      />
+
+      <AccountSecurityCard />
 
       {/* General */}
-      <Paper p="lg" withBorder>
-        <Text fw={600} mb="md">
-          General
-        </Text>
-        <SimpleGrid cols={{ base: 1, md: 2 }}>
-          <TextInput
-            label="Page Title"
-            value={settings.page_title || ""}
-            onChange={(e) => update("page_title", e.target.value)}
-          />
-          <TextInput
-            label="Page URL"
-            value={settings.page_url || ""}
-            onChange={(e) => update("page_url", e.target.value)}
-            placeholder="https://status.example.com"
-          />
-          <TextInput
-            label="Logo URL"
-            value={settings.logo_url || ""}
-            onChange={(e) => update("logo_url", e.target.value)}
-          />
-          <TextInput
-            label="Favicon URL"
-            value={settings.favicon_url || ""}
-            onChange={(e) => update("favicon_url", e.target.value)}
-          />
-          <Textarea
-            label="Page Description"
-            value={settings.page_description || ""}
-            onChange={(e) => update("page_description", e.target.value)}
-            rows={2}
-          />
-        </SimpleGrid>
-      </Paper>
+      <Card className="p-6">
+        <h2 className="text-base font-semibold text-gray-900">General</h2>
+        <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+          <Field label="Page Title">
+            <Input value={settings.page_title || ""} onChange={(e) => update("page_title", e.target.value)} />
+          </Field>
+          <Field label="Page URL">
+            <Input
+              value={settings.page_url || ""}
+              onChange={(e) => update("page_url", e.target.value)}
+              placeholder="https://status.example.com"
+            />
+          </Field>
+          <Field label="Logo URL">
+            <Input value={settings.logo_url || ""} onChange={(e) => update("logo_url", e.target.value)} />
+          </Field>
+          <Field label="Favicon URL">
+            <Input value={settings.favicon_url || ""} onChange={(e) => update("favicon_url", e.target.value)} />
+          </Field>
+          <div className="md:col-span-2">
+            <Field label="Page Description">
+              <Textarea
+                rows={2}
+                value={settings.page_description || ""}
+                onChange={(e) => update("page_description", e.target.value)}
+              />
+            </Field>
+          </div>
+        </div>
+      </Card>
 
       {/* Localization */}
-      <Paper p="lg" withBorder>
-        <Text fw={600} mb="md">
-          Localization
-        </Text>
-        <SimpleGrid cols={{ base: 1, md: 2 }}>
-          <Select
-            label="Timezone"
-            value={settings.timezone || "UTC"}
-            onChange={(v) => update("timezone", v || "UTC")}
-            data={[
-              "UTC",
-              "America/New_York",
-              "America/Chicago",
-              "America/Denver",
-              "America/Los_Angeles",
-              "Europe/London",
-              "Europe/Paris",
-              "Europe/Berlin",
-              "Asia/Tokyo",
-              "Asia/Singapore",
-              "Australia/Sydney",
-            ].map((tz) => ({ value: tz, label: tz }))}
-          />
-          <TextInput
-            label="Date Format"
-            value={settings.date_format || ""}
-            onChange={(e) => update("date_format", e.target.value)}
-          />
-        </SimpleGrid>
-      </Paper>
+      <Card className="p-6">
+        <h2 className="text-base font-semibold text-gray-900">Localization</h2>
+        <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+          <Field label="Timezone">
+            <Select value={settings.timezone || "UTC"} onChange={(e) => update("timezone", e.target.value)}>
+              {TIMEZONES.map((tz) => (
+                <option key={tz} value={tz}>
+                  {tz}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Date Format">
+            <Input value={settings.date_format || ""} onChange={(e) => update("date_format", e.target.value)} />
+          </Field>
+        </div>
+      </Card>
 
       {/* Automation */}
-      <Paper p="lg" withBorder>
-        <Text fw={600} mb="md">
-          Automation
-        </Text>
-        <SimpleGrid cols={{ base: 1, md: 2 }}>
-          <TextInput
-            label="Auto-Resolve After (hours)"
-            value={settings.auto_resolve_hours || "4"}
-            onChange={(e) => update("auto_resolve_hours", e.target.value)}
-            type="number"
-          />
-        </SimpleGrid>
-        <Group mt="md">
-          <Switch
+      <Card className="p-6">
+        <h2 className="text-base font-semibold text-gray-900">Automation</h2>
+        <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+          <Field label="Auto-Resolve After (hours)">
+            <Input
+              type="number"
+              value={settings.auto_resolve_hours || "4"}
+              onChange={(e) => update("auto_resolve_hours", e.target.value)}
+            />
+          </Field>
+        </div>
+        <div className="mt-4 divide-y divide-gray-200 border-t border-gray-200">
+          <Toggle
             label="Notify on incident create"
             checked={settings.notify_on_create === "1"}
-            onChange={(e) => update("notify_on_create", e.currentTarget.checked ? "1" : "0")}
+            onChange={(v) => update("notify_on_create", v ? "1" : "0")}
           />
-          <Switch
+          <Toggle
             label="Notify on incident update"
             checked={settings.notify_on_update === "1"}
-            onChange={(e) => update("notify_on_update", e.currentTarget.checked ? "1" : "0")}
+            onChange={(v) => update("notify_on_update", v ? "1" : "0")}
           />
-          <Switch
+          <Toggle
             label="Notify on resolve"
             checked={settings.notify_on_resolve === "1"}
-            onChange={(e) => update("notify_on_resolve", e.currentTarget.checked ? "1" : "0")}
+            onChange={(v) => update("notify_on_resolve", v ? "1" : "0")}
           />
-        </Group>
-      </Paper>
+        </div>
+      </Card>
 
       {/* Appearance */}
-      <Paper p="lg" withBorder>
-        <Text fw={600} mb="md">
-          Appearance
-        </Text>
-        <Stack gap="md">
-          <Textarea
-            label="Custom CSS"
-            value={settings.custom_css || ""}
-            onChange={(e) => update("custom_css", e.target.value)}
-            rows={4}
-          />
-          <Textarea
-            label="Custom HTML (head)"
-            value={settings.custom_html_head || ""}
-            onChange={(e) => update("custom_html_head", e.target.value)}
-            rows={2}
-          />
-          <Textarea
-            label="Custom HTML (footer)"
-            value={settings.custom_html_footer || ""}
-            onChange={(e) => update("custom_html_footer", e.target.value)}
-            rows={2}
-          />
-        </Stack>
-      </Paper>
+      <Card className="p-6">
+        <h2 className="text-base font-semibold text-gray-900">Appearance</h2>
+        <div className="mt-4 space-y-5">
+          <Field label="Custom CSS">
+            <Textarea rows={4} value={settings.custom_css || ""} onChange={(e) => update("custom_css", e.target.value)} />
+          </Field>
+          <Field label="Custom HTML (head)">
+            <Textarea
+              rows={2}
+              value={settings.custom_html_head || ""}
+              onChange={(e) => update("custom_html_head", e.target.value)}
+            />
+          </Field>
+          <Field label="Custom HTML (footer)">
+            <Textarea
+              rows={2}
+              value={settings.custom_html_footer || ""}
+              onChange={(e) => update("custom_html_footer", e.target.value)}
+            />
+          </Field>
+        </div>
+      </Card>
 
-      {/* Security */}
-      <Paper p="lg" withBorder>
-        <Text fw={600} mb="md">
-          Security
-        </Text>
-        <Stack gap="md">
-          <Switch
+      {/* Public page security */}
+      <Card className="p-6">
+        <h2 className="text-base font-semibold text-gray-900">Public Page</h2>
+        <div className="mt-4 divide-y divide-gray-200 border-t border-gray-200">
+          <Toggle
             label="Password protect public page"
+            description="Require a password before viewing the status page"
             checked={settings.password_protect === "1"}
-            onChange={(e) => update("password_protect", e.currentTarget.checked ? "1" : "0")}
+            onChange={(v) => update("password_protect", v ? "1" : "0")}
           />
-          <Divider />
-          <Text size="sm" c="dimmed">
-            Authentication is handled by Better Auth. Use the button below to sign out.
-          </Text>
-          <Button
-            variant="light"
-            color="red"
-            onClick={async () => {
-              await adminLogout();
-              window.location.href = "/admin/login";
-            }}
-          >
-            Sign Out
-          </Button>
-        </Stack>
-      </Paper>
+        </div>
+      </Card>
 
-      <Group justify="flex-end">
-        <Button onClick={handleSave} loading={saving}>
-          Save All Settings
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? "Saving…" : "Save All Settings"}
         </Button>
-      </Group>
-    </Stack>
+      </div>
+    </div>
+  );
+}
+
+// ── Account & Security (HookForms Pro change-password pattern) ─────
+
+function AccountSecurityCard() {
+  const { data: session } = useSession();
+  const navigate = useNavigate();
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordValid, setNewPasswordValid] = useState(false);
+  const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const user = session?.user;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPasswordValid) return;
+    setSubmitting(true);
+    setMessage(null);
+
+    const { error } = await changePassword({
+      currentPassword,
+      newPassword,
+      revokeOtherSessions: true,
+    });
+
+    setSubmitting(false);
+
+    if (error) {
+      setMessage({ tone: "error", text: error.message || "Current password is incorrect" });
+      return;
+    }
+
+    setCurrentPassword("");
+    setNewPassword("");
+    setMessage({ tone: "success", text: "Password updated successfully" });
+  };
+
+  return (
+    <Card className="p-6">
+      <div className="flex items-start justify-between gap-x-6">
+        <div>
+          <h2 className="text-base font-semibold text-gray-900">Account & Security</h2>
+          <p className="mt-0.5 text-sm/6 text-gray-500">
+            Signed in as{" "}
+            <span className="font-medium text-gray-700">{user?.email || "admin"}</span>
+          </p>
+        </div>
+        <Button
+          variant="secondary"
+          onClick={async () => {
+            await signOut();
+            navigate("/admin/login");
+          }}
+        >
+          Sign out
+        </Button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+        <PasswordField
+          name="current_password"
+          label="Current Password"
+          required
+          autoComplete="current-password"
+          value={currentPassword}
+          onChange={setCurrentPassword}
+        />
+        <PasswordField
+          name="new_password"
+          label="New Password"
+          placeholder="Min. 8 characters"
+          required
+          showStrength
+          showConfirm
+          confirmLabel="Confirm New Password"
+          confirmPlaceholder="Re-enter your new password"
+          autoComplete="new-password"
+          value={newPassword}
+          onChange={setNewPassword}
+          onValidityChange={setNewPasswordValid}
+        />
+
+        {message && (
+          <Alert tone={message.tone === "success" ? "success" : "error"}>{message.text}</Alert>
+        )}
+
+        <div className="flex justify-end">
+          <Button type="submit" disabled={!newPasswordValid || !currentPassword || submitting}>
+            {submitting ? "Updating…" : "Update Password"}
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }

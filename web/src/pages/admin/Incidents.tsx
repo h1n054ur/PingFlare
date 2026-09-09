@@ -1,24 +1,21 @@
 import { useState, useEffect } from "react";
-import {
-  Table,
-  Button,
-  Group,
-  Text,
-  Modal,
-  TextInput,
-  Select,
-  MultiSelect,
-  Textarea,
-  Stack,
-  Badge,
-  ActionIcon,
-  Paper,
-  Loader,
-  Center,
-  Tooltip,
-} from "@mantine/core";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { ExclamationTriangleIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { api } from "../../lib/api";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Select,
+  Table,
+  Td,
+  Textarea,
+  Th,
+  classNames,
+} from "../../components/ui";
 
 const incidentStatuses = [
   { value: "investigating", label: "Investigating" },
@@ -34,12 +31,20 @@ const severities = [
   { value: "critical", label: "Critical" },
 ];
 
-const statusColor = (s: string) => {
+type StatusTone = "green" | "yellow" | "red" | "gray" | "blue";
+
+const statusColor = (s: string): StatusTone => {
   if (s === "investigating") return "blue";
   if (s === "identified") return "yellow";
-  if (s === "monitoring") return "orange";
+  if (s === "monitoring") return "blue";
   if (s === "resolved" || s === "postmortem") return "green";
   return "gray";
+};
+
+const severityColor = (s: string): StatusTone => {
+  if (s === "critical") return "red";
+  if (s === "major") return "yellow";
+  return "yellow";
 };
 
 export default function AdminIncidents() {
@@ -125,120 +130,168 @@ export default function AdminIncidents() {
 
   if (loading)
     return (
-      <Center py="xl">
-        <Loader />
-      </Center>
+      <div className="flex justify-center py-16">
+        <div className="size-8 animate-spin rounded-full border-2 border-gray-300 border-t-indigo-600" />
+      </div>
     );
 
   return (
-    <Stack gap="lg">
-      <Group justify="space-between">
-        <Text fw={700} size="xl">
-          Incidents
-        </Text>
-        <Button leftSection={<IconPlus size={16} />} onClick={openCreate}>
-          Create Incident
-        </Button>
-      </Group>
+    <div className="space-y-8">
+      <PageHeader
+        title="Incidents"
+        subtitle="Track and communicate service disruptions"
+        actions={
+          <Button onClick={openCreate}>
+            <PlusIcon aria-hidden="true" className="size-4" />
+            Create Incident
+          </Button>
+        }
+      />
 
-      <Paper withBorder>
-        <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Title</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th>Severity</Table.Th>
-              <Table.Th>Impact</Table.Th>
-              <Table.Th>Created</Table.Th>
-              <Table.Th>Actions</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
+      {incidents.length === 0 ? (
+        <EmptyState
+          icon={<ExclamationTriangleIcon aria-hidden="true" className="size-6" />}
+          title="No incidents"
+          description="Create one to start communicating with subscribers."
+          action={
+            <Button onClick={openCreate}>
+              <PlusIcon aria-hidden="true" className="size-4" />
+              Create Incident
+            </Button>
+          }
+        />
+      ) : (
+        <Table>
+          <thead>
+            <tr>
+              <Th>Title</Th>
+              <Th>Status</Th>
+              <Th>Severity</Th>
+              <Th>Impact</Th>
+              <Th>Created</Th>
+              <Th>Actions</Th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
             {incidents.map((inc) => (
-              <Table.Tr key={inc.id}>
-                <Table.Td fw={500}>{inc.title}</Table.Td>
-                <Table.Td>
-                  <Badge color={statusColor(inc.status)} variant="light">
-                    {inc.status}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>
-                  <Badge color={inc.severity === "critical" ? "red" : inc.severity === "major" ? "orange" : "yellow"} variant="light">
-                    {inc.severity}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>{inc.impact || "none"}</Table.Td>
-                <Table.Td>{new Date(inc.created_at).toLocaleDateString()}</Table.Td>
-                <Table.Td>
-                  <Group gap="xs">
-                    <ActionIcon variant="subtle" onClick={() => openEdit(inc)}>
-                      <Text size="xs">Edit</Text>
-                    </ActionIcon>
-                    <ActionIcon variant="subtle" color="red" onClick={() => handleDelete(inc.id)}>
-                      <IconTrash size={16} />
-                    </ActionIcon>
-                  </Group>
-                </Table.Td>
-              </Table.Tr>
+              <tr key={inc.id} className="hover:bg-gray-50">
+                <Td className="font-medium text-gray-900">{inc.title}</Td>
+                <Td>
+                  <Badge tone={statusColor(inc.status)}>{inc.status}</Badge>
+                </Td>
+                <Td>
+                  <Badge tone={severityColor(inc.severity)}>{inc.severity}</Badge>
+                </Td>
+                <Td>{inc.impact || "none"}</Td>
+                <Td>{new Date(inc.created_at).toLocaleDateString()}</Td>
+                <Td>
+                  <div className="flex gap-x-2">
+                    <Button variant="ghost" size="sm" onClick={() => openEdit(inc)}>
+                      Edit
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(inc.id)}>
+                      <TrashIcon aria-hidden="true" className="size-4 text-red-600" />
+                    </Button>
+                  </div>
+                </Td>
+              </tr>
             ))}
-          </Table.Tbody>
+          </tbody>
         </Table>
-        {incidents.length === 0 && (
-          <Text ta="center" py="xl" c="dimmed">
-            No incidents. Create one to start communicating with subscribers.
-          </Text>
-        )}
-      </Paper>
+      )}
 
       <Modal
-        opened={modalOpen}
+        open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? "Update Incident" : "Create Incident"}
-        size="lg"
+        wide
       >
-        <Stack gap="md">
-          <TextInput
-            label="Title"
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-            disabled={!!editing}
-            required
-          />
-          <Group grow>
-            <Select
-              label="Status"
-              value={form.status}
-              onChange={(v) => setForm({ ...form, status: v || "investigating" })}
-              data={incidentStatuses}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
+          className="space-y-5"
+        >
+          <Field label="Title" required>
+            <Input
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              disabled={!!editing}
+              required
             />
-            <Select
-              label="Severity"
-              value={form.severity}
-              onChange={(v) => setForm({ ...form, severity: v || "minor" })}
-              data={severities}
+          </Field>
+          <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+            <Field label="Status">
+              <Select
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value })}
+              >
+                {incidentStatuses.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Severity">
+              <Select
+                value={form.severity}
+                onChange={(e) => setForm({ ...form, severity: e.target.value })}
+              >
+                {severities.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+          <Field label="Affected Components">
+            <div className="flex flex-wrap gap-2">
+              {components.map((c: any) => {
+                const selected = form.component_ids.includes(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        component_ids: selected
+                          ? form.component_ids.filter((id) => id !== c.id)
+                          : [...form.component_ids, c.id],
+                      })
+                    }
+                    className={classNames(
+                      selected
+                        ? "bg-indigo-600 text-white ring-indigo-600"
+                        : "bg-white text-gray-700 ring-gray-300 hover:bg-gray-50",
+                      "rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset"
+                    )}
+                  >
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+          <Field label={editing ? "New Update Message" : "Initial Message"}>
+            <Textarea
+              rows={4}
+              value={form.message}
+              onChange={(e) => setForm({ ...form, message: e.target.value })}
+              placeholder="What's happening?"
             />
-          </Group>
-          <MultiSelect
-            label="Affected Components"
-            value={form.component_ids}
-            onChange={(v) => setForm({ ...form, component_ids: v })}
-            data={components.map((c: any) => ({ value: c.id, label: c.name }))}
-          />
-          <Textarea
-            label={editing ? "New Update Message" : "Initial Message"}
-            value={form.message}
-            onChange={(e) => setForm({ ...form, message: e.target.value })}
-            rows={4}
-            placeholder="What's happening?"
-          />
-          <Group justify="flex-end">
-            <Button variant="light" onClick={() => setModalOpen(false)}>
+          </Field>
+          <div className="flex justify-end gap-x-3">
+            <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>{editing ? "Post Update" : "Create Incident"}</Button>
-          </Group>
-        </Stack>
+            <Button type="submit">{editing ? "Post Update" : "Create Incident"}</Button>
+          </div>
+        </form>
       </Modal>
-    </Stack>
+    </div>
   );
 }

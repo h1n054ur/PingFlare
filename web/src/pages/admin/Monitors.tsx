@@ -1,25 +1,27 @@
 import { useState, useEffect } from "react";
 import {
-  Table,
-  Button,
-  Group,
-  Text,
-  Modal,
-  TextInput,
-  Select,
-  Switch,
-  NumberInput,
-  Stack,
-  Badge,
-  ActionIcon,
-  Paper,
-  Textarea,
-  Loader,
-  Center,
-  Tooltip,
-} from "@mantine/core";
-import { IconPlus, IconTrash, IconRefresh, IconEye, IconEyeOff } from "@tabler/icons-react";
+  ArrowPathIcon,
+  EyeIcon,
+  PlusIcon,
+  SignalIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 import { api } from "../../lib/api";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Field,
+  Input,
+  Modal,
+  PageHeader,
+  Select,
+  Table,
+  Td,
+  Textarea,
+  Th,
+  Toggle,
+} from "../../components/ui";
 
 interface Monitor {
   id: string;
@@ -41,6 +43,12 @@ interface Monitor {
   last_response_time: number | null;
   component_id: string | null;
 }
+
+const numOr = (value: string, fallback: number) => {
+  if (value === "") return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
 
 export default function AdminMonitors() {
   const [monitors, setMonitors] = useState<Monitor[]>([]);
@@ -153,207 +161,242 @@ export default function AdminMonitors() {
 
   if (loading)
     return (
-      <Center py="xl">
-        <Loader />
-      </Center>
+      <div className="flex justify-center py-16">
+        <div className="size-8 animate-spin rounded-full border-2 border-gray-300 border-t-indigo-600" />
+      </div>
     );
 
   return (
-    <Stack gap="lg">
-      <Group justify="space-between">
-        <Text fw={700} size="xl">
-          Monitors
-        </Text>
-        <Group>
-          <Button variant="light" leftSection={<IconRefresh size={16} />} onClick={load}>
-            Refresh
-          </Button>
-          <Button leftSection={<IconPlus size={16} />} onClick={openCreate}>
-            Add Monitor
-          </Button>
-        </Group>
-      </Group>
+    <div className="space-y-8">
+      <PageHeader
+        title="Monitors"
+        actions={
+          <>
+            <Button variant="secondary" onClick={load}>
+              <ArrowPathIcon aria-hidden="true" className="size-4" />
+              Refresh
+            </Button>
+            <Button onClick={openCreate}>
+              <PlusIcon aria-hidden="true" className="size-4" />
+              Add Monitor
+            </Button>
+          </>
+        }
+      />
 
-      <Paper withBorder>
-        <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Name</Table.Th>
-              <Table.Th>Type</Table.Th>
-              <Table.Th>URL</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th>Interval</Table.Th>
-              <Table.Th>Response</Table.Th>
-              <Table.Th>Enabled</Table.Th>
-              <Table.Th>Actions</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
+      {monitors.length === 0 ? (
+        <EmptyState
+          icon={<SignalIcon aria-hidden="true" className="size-6" />}
+          title="No monitors configured"
+          description='Click "Add Monitor" to create one.'
+          action={
+            <Button onClick={openCreate}>
+              <PlusIcon aria-hidden="true" className="size-4" />
+              Add Monitor
+            </Button>
+          }
+        />
+      ) : (
+        <Table>
+          <thead className="bg-gray-50">
+            <tr>
+              <Th>Name</Th>
+              <Th>Type</Th>
+              <Th>URL</Th>
+              <Th>Status</Th>
+              <Th>Interval</Th>
+              <Th>Response</Th>
+              <Th>Enabled</Th>
+              <Th>Actions</Th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
             {monitors.map((m) => (
-              <Table.Tr key={m.id}>
-                <Table.Td fw={500}>{m.name}</Table.Td>
-                <Table.Td>
-                  <Badge variant="outline">{m.type}</Badge>
-                </Table.Td>
-                <Table.Td>
-                  <Text size="sm" truncate maw={200}>
-                    {m.url || "N/A"}
-                  </Text>
-                </Table.Td>
-                <Table.Td>
-                  <Badge color={statusColor(m.status)} variant="light">
-                    {m.status}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>{m.interval}s</Table.Td>
-                <Table.Td>
-                  {m.last_response_time ? `${m.last_response_time}ms` : "N/A"}
-                </Table.Td>
-                <Table.Td>
-                  <Switch
-                    size="xs"
-                    checked={!!m.enabled}
-                    onChange={async () => {
-                      await api.monitors.update(m.id, { enabled: m.enabled ? 0 : 1 });
-                      load();
-                    }}
-                  />
-                </Table.Td>
-                <Table.Td>
-                  <Group gap="xs">
-                    <Tooltip label="Edit">
-                      <ActionIcon variant="subtle" onClick={() => openEdit(m)}>
-                        <IconEye size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label="Delete">
-                      <ActionIcon variant="subtle" color="red" onClick={() => handleDelete(m.id)}>
-                        <IconTrash size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                  </Group>
-                </Table.Td>
-              </Table.Tr>
+              <tr key={m.id}>
+                <Td className="font-medium">{m.name}</Td>
+                <Td>
+                  <Badge tone="gray">{m.type}</Badge>
+                </Td>
+                <Td className="max-w-[200px]">
+                  <span className="block truncate text-sm/6 text-gray-500">{m.url || "N/A"}</span>
+                </Td>
+                <Td>
+                  <Badge tone={statusColor(m.status)}>{m.status}</Badge>
+                </Td>
+                <Td>{m.interval}s</Td>
+                <Td>{m.last_response_time ? `${m.last_response_time}ms` : "N/A"}</Td>
+                <Td>
+                  <div className="-my-3">
+                    <Toggle
+                      checked={!!m.enabled}
+                      onChange={async () => {
+                        await api.monitors.update(m.id, { enabled: m.enabled ? 0 : 1 });
+                        load();
+                      }}
+                    />
+                  </div>
+                </Td>
+                <Td>
+                  <div className="flex items-center gap-x-2">
+                    <button
+                      type="button"
+                      title="Edit"
+                      onClick={() => openEdit(m)}
+                      className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    >
+                      <EyeIcon aria-hidden="true" className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Delete"
+                      onClick={() => handleDelete(m.id)}
+                      className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <TrashIcon aria-hidden="true" className="size-4" />
+                    </button>
+                  </div>
+                </Td>
+              </tr>
             ))}
-          </Table.Tbody>
+          </tbody>
         </Table>
-        {monitors.length === 0 && (
-          <Text ta="center" py="xl" c="dimmed">
-            No monitors configured. Click "Add Monitor" to create one.
-          </Text>
-        )}
-      </Paper>
+      )}
 
       <Modal
-        opened={modalOpen}
+        open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? "Edit Monitor" : "Add Monitor"}
-        size="lg"
+        wide
       >
-        <Stack gap="md">
-          <TextInput
-            label="Name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-          />
-          <Select
-            label="Type"
-            value={form.type}
-            onChange={(v) => setForm({ ...form, type: v || "http" })}
-            data={[
-              { value: "http", label: "HTTP/HTTPS" },
-              { value: "tcp", label: "TCP" },
-            ]}
-          />
-          <TextInput
-            label="URL"
-            value={form.url}
-            onChange={(e) => setForm({ ...form, url: e.target.value })}
-            placeholder={form.type === "http" ? "https://example.com" : "host:port"}
-            required
-          />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
+          className="space-y-5"
+        >
+          <Field label="Name" required>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Type">
+            <Select
+              value={form.type}
+              onChange={(e) => setForm({ ...form, type: e.target.value || "http" })}
+            >
+              <option value="http">HTTP/HTTPS</option>
+              <option value="tcp">TCP</option>
+            </Select>
+          </Field>
+          <Field label="URL" required>
+            <Input
+              value={form.url}
+              onChange={(e) => setForm({ ...form, url: e.target.value })}
+              placeholder={form.type === "http" ? "https://example.com" : "host:port"}
+              required
+            />
+          </Field>
           {form.type === "http" && (
-            <>
-              <TextInput
-                label="Expected Status Codes"
-                value={form.expected_codes}
-                onChange={(e) => setForm({ ...form, expected_codes: e.target.value })}
-                placeholder="200,201,204"
-              />
-              <TextInput
-                label="Keyword (optional)"
-                value={form.keyword}
-                onChange={(e) => setForm({ ...form, keyword: e.target.value })}
-                placeholder="Text to find in response"
-              />
+            <div className="space-y-5">
+              <Field label="Expected Status Codes">
+                <Input
+                  value={form.expected_codes}
+                  onChange={(e) => setForm({ ...form, expected_codes: e.target.value })}
+                  placeholder="200,201,204"
+                />
+              </Field>
+              <Field label="Keyword (optional)">
+                <Input
+                  value={form.keyword}
+                  onChange={(e) => setForm({ ...form, keyword: e.target.value })}
+                  placeholder="Text to find in response"
+                />
+              </Field>
               {form.keyword && (
-                <Switch
+                <Toggle
                   label="Keyword must NOT be present (forbidden)"
                   checked={form.keyword_forbidden}
-                  onChange={(e) => setForm({ ...form, keyword_forbidden: e.currentTarget.checked })}
+                  onChange={(v) => setForm({ ...form, keyword_forbidden: v })}
                 />
               )}
-              <Textarea
-                label="Custom Headers (JSON)"
-                value={form.headers}
-                onChange={(e) => setForm({ ...form, headers: e.target.value })}
-                placeholder='{"Authorization": "Bearer ..."}'
-                rows={3}
-              />
-            </>
+              <Field label="Custom Headers (JSON)">
+                <Textarea
+                  rows={3}
+                  value={form.headers}
+                  onChange={(e) => setForm({ ...form, headers: e.target.value })}
+                  placeholder='{"Authorization": "Bearer ..."}'
+                />
+              </Field>
+            </div>
           )}
-          <Group grow>
-            <NumberInput
-              label="Timeout (seconds)"
-              value={form.timeout}
-              onChange={(v) => setForm({ ...form, timeout: typeof v === "number" ? v : 30 })}
-              min={5}
-              max={120}
-            />
-            <NumberInput
-              label="Check Interval (seconds)"
-              value={form.interval}
-              onChange={(v) => setForm({ ...form, interval: typeof v === "number" ? v : 60 })}
-              min={30}
-              max={3600}
-            />
-          </Group>
-          <Group grow>
-            <NumberInput
-              label="Grace Period (checks)"
-              value={form.grace_period}
-              onChange={(v) => setForm({ ...form, grace_period: typeof v === "number" ? v : 3 })}
-              min={1}
-              max={10}
-            />
-            <NumberInput
-              label="Degraded Threshold (ms)"
-              value={form.degraded_threshold}
-              onChange={(v) => setForm({ ...form, degraded_threshold: typeof v === "number" ? v : 5000 })}
-              min={1000}
-            />
-          </Group>
-          <Select
-            label="Linked Component (optional)"
-            value={form.component_id}
-            onChange={(v) => setForm({ ...form, component_id: v || "" })}
-            data={components.map((c: any) => ({ value: c.id, label: c.name }))}
-            clearable
-          />
-          <Switch
+          <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+            <Field label="Timeout (seconds)">
+              <Input
+                type="number"
+                min={5}
+                max={120}
+                value={form.timeout}
+                onChange={(e) => setForm({ ...form, timeout: numOr(e.target.value, 30) })}
+              />
+            </Field>
+            <Field label="Check Interval (seconds)">
+              <Input
+                type="number"
+                min={30}
+                max={3600}
+                value={form.interval}
+                onChange={(e) => setForm({ ...form, interval: numOr(e.target.value, 60) })}
+              />
+            </Field>
+            <Field label="Grace Period (checks)">
+              <Input
+                type="number"
+                min={1}
+                max={10}
+                value={form.grace_period}
+                onChange={(e) => setForm({ ...form, grace_period: numOr(e.target.value, 3) })}
+              />
+            </Field>
+            <Field label="Degraded Threshold (ms)">
+              <Input
+                type="number"
+                min={1000}
+                value={form.degraded_threshold}
+                onChange={(e) =>
+                  setForm({ ...form, degraded_threshold: numOr(e.target.value, 5000) })
+                }
+              />
+            </Field>
+          </div>
+          <Field label="Linked Component (optional)">
+            <Select
+              value={form.component_id}
+              onChange={(e) => setForm({ ...form, component_id: e.target.value })}
+            >
+              <option value="">None</option>
+              {components.map((c: any) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Toggle
             label="Enabled"
             checked={form.enabled}
-            onChange={(e) => setForm({ ...form, enabled: e.currentTarget.checked })}
+            onChange={(v) => setForm({ ...form, enabled: v })}
           />
-          <Group justify="flex-end">
-            <Button variant="light" onClick={() => setModalOpen(false)}>
+          <div className="flex justify-end gap-x-3 pt-2">
+            <Button variant="secondary" type="button" onClick={() => setModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>{editing ? "Save Changes" : "Create Monitor"}</Button>
-          </Group>
-        </Stack>
+            <Button type="submit">{editing ? "Save Changes" : "Create Monitor"}</Button>
+          </div>
+        </form>
       </Modal>
-    </Stack>
+    </div>
   );
 }
