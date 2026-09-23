@@ -1,0 +1,30 @@
+# Test workflow for GitNotify: a pretend deploy started when CI on main succeeds, named like aldernco's so the
+# live deploy card and its PR detection get exercised. It deploys nothing.
+name: Deploy
+run-name: Deploy to staging · ${{ github.event.workflow_run.display_title || 'run by hand' }}
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  changes:
+    name: What changed
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    steps:
+      - run: sleep 4 && echo "changes"
+  deploy:
+    name: Deploy the worker
+    needs: changes
+    runs-on: ubuntu-latest
+    steps:
+      - run: sleep 12 && echo "deployed (not really)"
+  smoke:
+    name: Smoke test
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - run: sleep 5 && echo "smoke ok"

@@ -1,0 +1,28 @@
+# Test workflow for GitNotify (Borderless-Technology-Solutions/github-discord-notify#4): three quick jobs, so the
+# live CI card has something to show. Fails on purpose while the file `.gitnotify-fail` exists.
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - run: sleep 5 && echo "lint ok"
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the failure switch
+        run: test ! -f .gitnotify-fail
+      - run: sleep 10 && echo "tests ok"
+  build:
+    name: Build
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - run: sleep 8 && echo "build ok"
